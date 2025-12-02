@@ -1,6 +1,11 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
+import {
+  HandThumbUpIcon,
+  HandThumbDownIcon,
+  CheckCircleIcon,
+} from '@heroicons/react/24/outline'
 
 interface SearchResult {
   id: number
@@ -14,6 +19,7 @@ export default function Home() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ratedScenarios, setRatedScenarios] = useState<Set<number>>(new Set())
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault()
@@ -46,6 +52,34 @@ export default function Home() {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFeedback = async (scenarioId: number, rating: number) => {
+    // Don't allow multiple ratings for the same scenario
+    if (ratedScenarios.has(scenarioId)) {
+      return
+    }
+
+    try {
+      // Submit feedback (non-blocking)
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          scenarioId,
+          rating,
+        }),
+      })
+
+      // Mark as rated
+      setRatedScenarios(new Set([...ratedScenarios, scenarioId]))
+    } catch (err) {
+      // Silently fail - feedback is non-critical
+      console.error('Failed to submit feedback:', err)
     }
   }
 
@@ -148,26 +182,59 @@ export default function Home() {
               </h2>
               <div className="flex-1 h-px bg-gradient-to-r from-slate-300 to-transparent"></div>
             </div>
-            {results.map((result, index) => (
-              <div
-                key={result.id}
-                className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-slate-200/50 p-6 hover:shadow-xl hover:border-blue-300/50 transition-all duration-200"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-slate-800 mb-3">
-                      {result.title}
-                    </h3>
-                    <p className="text-slate-600 leading-relaxed">
-                      {result.description}
-                    </p>
+            {results.map((result, index) => {
+              const isRated = ratedScenarios.has(result.id)
+              return (
+                <div
+                  key={result.id}
+                  className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-slate-200/50 p-6 hover:shadow-xl hover:border-blue-300/50 transition-all duration-200"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-slate-800 mb-3">
+                        {result.title}
+                      </h3>
+                      <p className="text-slate-600 leading-relaxed mb-4">
+                        {result.description}
+                      </p>
+                      {isRated ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                          <CheckCircleIcon className="w-5 h-5" />
+                          Thank you for your feedback!
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 font-medium">
+                            Did this help?
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleFeedback(result.id, 1)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 transition-colors font-medium text-sm"
+                              title="This helped"
+                            >
+                              <HandThumbUpIcon className="w-5 h-5" />
+                              <span>Helpful</span>
+                            </button>
+                            <button
+                              onClick={() => handleFeedback(result.id, -1)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 transition-colors font-medium text-sm"
+                              title="This didn't help"
+                            >
+                              <HandThumbDownIcon className="w-5 h-5" />
+                              <span>Not helpful</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

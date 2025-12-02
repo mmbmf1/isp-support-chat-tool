@@ -95,6 +95,30 @@ export async function insertScenario(
 }
 
 /**
+ * Record user feedback for a scenario
+ * @param query - The user's search query
+ * @param scenarioId - The ID of the scenario that was rated
+ * @param rating - 1 for thumbs up, -1 for thumbs down
+ */
+export async function recordFeedback(
+  query: string,
+  scenarioId: number,
+  rating: number,
+): Promise<void> {
+  const feedbackQuery = `
+    INSERT INTO isp_support.feedback (query, scenario_id, rating)
+    VALUES ($1, $2, $3)
+  `
+
+  try {
+    await pool.query(feedbackQuery, [query, scenarioId, rating])
+  } catch (error) {
+    console.error('Error recording feedback:', error)
+    // Don't throw - feedback is non-critical, don't break the app
+  }
+}
+
+/**
  * Close the database connection pool
  */
 export async function closePool(): Promise<void> {
