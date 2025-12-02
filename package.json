@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "seed": "tsx scripts/seed.ts"
@@ -27,6 +29,7 @@
     "@types/react-dom": "19",
     "eslint": "9",
     "eslint-config-next": "16.0.6",
+    "prettier": "3.7.3",
     "tailwindcss": "4",
     "tsx": "4.19.2",
     "typescript": "5"

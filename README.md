@@ -51,6 +51,7 @@ npm run docker:up
 ```
 
 This will:
+
 - Start PostgreSQL 16 with pgvector extension
 - Create the database `isp_support`
 - Enable the pgvector extension automatically
@@ -76,6 +77,7 @@ npm run seed
 ```
 
 This will:
+
 - Generate embeddings for all sample scenarios
 - Insert them into the database
 - Display progress as it processes each scenario
@@ -119,17 +121,19 @@ The seed data is structured as an array of objects with `title` and `description
 
 ```typescript
 const scenarios = [
-    {
-        title: "Cable Modem Signal Issues",
-        description: "User reports frequent disconnections. Check signal levels, verify cable connections, and test with different modem if available."
-    },
-    // ... more scenarios
-];
+  {
+    title: 'Cable Modem Signal Issues',
+    description:
+      'User reports frequent disconnections. Check signal levels, verify cable connections, and test with different modem if available.',
+  },
+  // ... more scenarios
+]
 ```
 
 ### Database Schema
 
 The database schema is ISP-agnostic and only requires:
+
 - `title`: Short scenario title
 - `description`: Detailed scenario description
 - `embedding`: Vector embedding (automatically generated)
@@ -138,8 +142,8 @@ No ISP-specific fields are required, making it easy to adapt for any ISP type.
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
+| Variable       | Description                  | Example                                        |
+| -------------- | ---------------------------- | ---------------------------------------------- |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/dbname` |
 
 ## Available Scripts

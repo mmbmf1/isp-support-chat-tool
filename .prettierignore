@@ -1,0 +1,19 @@
+# Dependencies
+node_modules
+package-lock.json
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Environment files
+.env*
+
+# Logs
+*.log
+
+# Other
+.DS_Store
+*.tsbuildinfo
