@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateEmbedding } from '@/lib/embeddings'
-import { searchSimilarScenarios, closePool } from '@/lib/db'
+import { searchSimilarScenarios } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,5 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 },
     )
-  } finally {
-    await closePool()
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getResolution, closePool } from '@/lib/db'
+import { getResolution } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +37,5 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 },
     )
-  } finally {
-    await closePool()
   }
 }

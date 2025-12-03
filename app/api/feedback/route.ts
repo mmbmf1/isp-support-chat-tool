@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { recordFeedback, closePool } from '@/lib/db'
+import { recordFeedback } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +37,5 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 },
     )
-  } finally {
-    await closePool()
   }
 }

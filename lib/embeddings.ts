@@ -41,56 +41,14 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const extractor = await PipelineSingleton.getInstance()
   const output = await extractor(text, { pooling: 'mean', normalize: true })
 
-  // Extract the embedding array from the output
-  // The output from transformers.js feature-extraction pipeline is a Tensor
-  // We need to convert it to a regular JavaScript array
-  let embedding: number[]
+  // Simplified extraction - assumes output.data is the tensor data
+  const tensorData = (output as any).data
+  const embedding = Array.from(tensorData)
 
-  try {
-    // Check if output has a .data property (Tensor object)
-    if (output && typeof output === 'object' && 'data' in output) {
-      const tensorData = (output as any).data
-      // If data is a function, call it; otherwise use it directly
-      if (typeof tensorData === 'function') {
-        embedding = Array.from(tensorData())
-      } else if (Array.isArray(tensorData)) {
-        embedding = tensorData.flat()
-      } else {
-        // Try to convert tensor data to array
-        embedding = Array.from(tensorData as any)
-      }
-    } else if (Array.isArray(output)) {
-      // If output is already an array
-      embedding = output.flat()
-    } else if (
-      output &&
-      typeof (output as any)[Symbol.iterator] === 'function'
-    ) {
-      // If output is iterable
-      embedding = Array.from(output as any)
-    } else {
-      throw new Error(`Unexpected output format: ${typeof output}`)
-    }
-
-    // Ensure we have a valid number array
-    if (!Array.isArray(embedding) || embedding.length === 0) {
-      throw new Error(
-        'Failed to extract embedding vector - empty or invalid array',
-      )
-    }
-
-    // Convert to numbers and validate
-    const numbers = embedding.map((v) => {
-      const num = typeof v === 'number' ? v : parseFloat(String(v))
-      if (isNaN(num)) {
-        throw new Error(`Invalid number in embedding: ${v}`)
-      }
-      return num
-    })
-
-    return numbers
-  } catch (error) {
-    console.error('Error extracting embedding:', error)
-    throw error
+  // Validate and convert to numbers
+  if (!Array.isArray(embedding) || embedding.length === 0) {
+    throw new Error('Failed to extract embedding vector')
   }
+
+  return embedding.map((v) => Number(v))
 }
