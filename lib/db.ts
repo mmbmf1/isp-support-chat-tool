@@ -84,7 +84,8 @@ export async function searchSimilarScenarios(
             helpful_percentage
         FROM ranked_scenarios
         WHERE rn = 1
-        ORDER BY similarity DESC
+        ORDER BY 
+            (similarity * 0.7 + COALESCE(helpful_percentage / 100.0, 0.5) * 0.3) DESC
         LIMIT $2
     `
 
