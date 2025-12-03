@@ -620,28 +620,19 @@ async function seedDatabase() {
   console.log(`Processing ${scenarios.length} scenarios...`)
 
   try {
-    const insertedScenarioIds: number[] = []
-
-    // First, insert all scenarios and collect their IDs
     for (let i = 0; i < scenarios.length; i++) {
       const scenario = scenarios[i]
       console.log(
         `[${i + 1}/${scenarios.length}] Processing: ${scenario.title}`,
       )
 
-      // Generate embedding for the scenario description
-      // Combine title and description for better semantic matching
       const textToEmbed = `${scenario.title}. ${scenario.description}`
       const embedding = await generateEmbedding(textToEmbed)
-
-      // Insert scenario with embedding into database
-      // Note: We need to get the inserted ID - for now we'll query it
       await insertScenario(scenario.title, scenario.description, embedding)
 
       console.log(`✓ Inserted: ${scenario.title}`)
     }
 
-    // Get all scenario IDs in order (they should match our array order)
     const result = await pool.query(
       'SELECT id FROM isp_support.scenarios ORDER BY id',
     )

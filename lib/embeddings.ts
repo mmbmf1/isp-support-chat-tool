@@ -69,12 +69,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       // If output is iterable
       embedding = Array.from(output as any)
     } else {
-      // Debug: log the output structure to understand what we're getting
-      console.error('Unexpected output type:', typeof output)
-      console.error(
-        'Output keys:',
-        output && typeof output === 'object' ? Object.keys(output) : 'N/A',
-      )
       throw new Error(`Unexpected output format: ${typeof output}`)
     }
 
@@ -97,8 +91,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     return numbers
   } catch (error) {
     console.error('Error extracting embedding:', error)
-    console.error('Output type:', typeof output)
-    console.error('Output:', output)
     throw error
   }
 }

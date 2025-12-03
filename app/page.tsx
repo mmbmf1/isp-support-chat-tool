@@ -5,6 +5,7 @@ import {
   HandThumbUpIcon,
   HandThumbDownIcon,
   CheckCircleIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import ResolutionModal from './components/ResolutionModal'
 
@@ -115,6 +116,13 @@ export default function Home() {
     }
   }
 
+  const handleClear = () => {
+    setQuery('')
+    setResults([])
+    setError(null)
+    setRatedScenarios(new Set())
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -130,14 +138,26 @@ export default function Home() {
 
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="flex gap-3">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g., router light is red, no internet connection..."
-                className="flex-1 px-5 py-3.5 text-slate-700 bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                disabled={loading}
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="e.g., router light is red, no internet connection..."
+                  className="w-full px-5 py-3.5 pr-10 text-slate-700 bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
+                  disabled={loading}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <XMarkIcon className="w-5 h-5 text-slate-400" />
+                  </button>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={loading || !query.trim()}
