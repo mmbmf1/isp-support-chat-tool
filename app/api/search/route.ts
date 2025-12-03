@@ -9,15 +9,12 @@ export async function POST(request: NextRequest) {
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Query parameter is required and must be a non-empty string' },
+        { error: 'Query is required' },
         { status: 400 },
       )
     }
 
-    // Generate embedding for the user query
     const queryEmbedding = await generateEmbedding(query.trim())
-
-    // Search for similar scenarios
     const results = await searchSimilarScenarios(queryEmbedding, 5)
 
     return NextResponse.json({ results })

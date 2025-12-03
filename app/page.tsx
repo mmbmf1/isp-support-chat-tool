@@ -6,12 +6,22 @@ import {
   HandThumbDownIcon,
   CheckCircleIcon,
 } from '@heroicons/react/24/outline'
+import ResolutionModal from './components/ResolutionModal'
 
 interface SearchResult {
   id: number
   title: string
   description: string
-  similarity?: number
+  helpful_count?: number
+  total_feedback?: number
+  helpful_percentage?: number
+}
+
+interface Resolution {
+  id: number
+  scenario_id: number
+  steps: string[]
+  step_type: 'numbered' | 'bullets'
 }
 
 export default function Home() {
@@ -20,6 +30,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ratedScenarios, setRatedScenarios] = useState<Set<number>>(new Set())
+  const [showResolutionModal, setShowResolutionModal] = useState(false)
+  const [selectedResolution, setSelectedResolution] =
+    useState<Resolution | null>(null)
+  const [selectedScenarioTitle, setSelectedScenarioTitle] = useState('')
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault()
@@ -56,44 +70,61 @@ export default function Home() {
   }
 
   const handleFeedback = async (scenarioId: number, rating: number) => {
-    // Don't allow multiple ratings for the same scenario
-    if (ratedScenarios.has(scenarioId)) {
-      return
-    }
+    if (ratedScenarios.has(scenarioId)) return
 
+    if (rating === 1) {
+      try {
+        const response = await fetch(`/api/resolution?scenarioId=${scenarioId}`)
+        if (response.ok) {
+          const resolution: Resolution = await response.json()
+          const scenario = results.find((r) => r.id === scenarioId)
+          setSelectedResolution(resolution)
+          setSelectedScenarioTitle(scenario?.title || '')
+          setShowResolutionModal(true)
+        } else {
+          await submitFeedback(scenarioId, rating)
+        }
+      } catch (err) {
+        console.error('Failed to fetch resolution:', err)
+        await submitFeedback(scenarioId, rating)
+      }
+    } else {
+      await submitFeedback(scenarioId, rating)
+    }
+  }
+
+  const submitFeedback = async (scenarioId: number, rating: number) => {
     try {
-      // Submit feedback (non-blocking)
       await fetch('/api/feedback', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query,
-          scenarioId,
-          rating,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, scenarioId, rating }),
       })
-
-      // Mark as rated
       setRatedScenarios(new Set([...ratedScenarios, scenarioId]))
     } catch (err) {
-      // Silently fail - feedback is non-critical
       console.error('Failed to submit feedback:', err)
+    }
+  }
+
+  const handleCloseModal = () => {
+    setShowResolutionModal(false)
+    if (selectedResolution) {
+      submitFeedback(selectedResolution.scenario_id, 1)
+      setSelectedResolution(null)
+      setSelectedScenarioTitle('')
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header Card */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-8 mb-8">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-slate-800 mb-3">
+            <h1 className="text-3xl font-bold text-slate-800 mb-2">
               Troubleshooting Search
             </h1>
-            <p className="text-slate-600 text-lg">
-              Enter your troubleshooting query to find similar scenarios
+            <p className="text-slate-600">
+              Find solutions for common ISP issues
             </p>
           </div>
 
@@ -110,78 +141,29 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={loading || !query.trim()}
-                className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-sm"
+                className="px-8 py-3.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors shadow-md hover:shadow-lg"
               >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="animate-spin h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Searching...
-                  </span>
-                ) : (
-                  'Search'
-                )}
+                {loading ? 'Searching...' : 'Search'}
               </button>
             </div>
           </form>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50/80 border-l-4 border-red-500 rounded-lg text-red-800">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="font-medium">{error}</span>
-              </div>
+            <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded text-red-800">
+              <span className="font-medium">{error}</span>
             </div>
           )}
         </div>
 
-        {/* Loading State */}
         {loading && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
-            <p className="text-slate-600 text-lg font-medium">
-              Searching for similar scenarios...
-            </p>
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-3 border-blue-200 border-t-blue-600 mb-4"></div>
+            <p className="text-slate-600">Searching...</p>
           </div>
         )}
 
-        {/* Results */}
         {results.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-2xl font-bold text-slate-800">
-                Top {results.length} Results
-              </h2>
-              <div className="flex-1 h-px bg-gradient-to-r from-slate-300 to-transparent"></div>
-            </div>
             {results.map((result, index) => {
               const isRated = ratedScenarios.has(result.id)
               return (
@@ -194,40 +176,43 @@ export default function Home() {
                       {index + 1}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-slate-800 mb-3">
-                        {result.title}
-                      </h3>
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-xl font-semibold text-slate-800">
+                          {result.title}
+                        </h3>
+                        {result.helpful_percentage !== null &&
+                          result.helpful_percentage !== undefined &&
+                          result.total_feedback &&
+                          result.total_feedback > 0 && (
+                            <div className="px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                              {result.helpful_percentage}% ({result.total_feedback})
+                            </div>
+                          )}
+                      </div>
                       <p className="text-slate-600 leading-relaxed mb-4">
                         {result.description}
                       </p>
                       {isRated ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                          <CheckCircleIcon className="w-5 h-5" />
-                          Thank you for your feedback!
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircleIcon className="w-4 h-4" />
+                          <span>Thank you for your feedback</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-slate-600 font-medium">
-                            Did this help?
-                          </span>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleFeedback(result.id, 1)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 transition-colors font-medium text-sm"
-                              title="This helped"
-                            >
-                              <HandThumbUpIcon className="w-5 h-5" />
-                              <span>Helpful</span>
-                            </button>
-                            <button
-                              onClick={() => handleFeedback(result.id, -1)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 transition-colors font-medium text-sm"
-                              title="This didn't help"
-                            >
-                              <HandThumbDownIcon className="w-5 h-5" />
-                              <span>Not helpful</span>
-                            </button>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleFeedback(result.id, 1)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 transition-colors text-sm"
+                          >
+                            <HandThumbUpIcon className="w-4 h-4" />
+                            <span>Helpful</span>
+                          </button>
+                          <button
+                            onClick={() => handleFeedback(result.id, -1)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 transition-colors text-sm"
+                          >
+                            <HandThumbDownIcon className="w-4 h-4" />
+                            <span>Not helpful</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -238,31 +223,23 @@ export default function Home() {
           </div>
         )}
 
-        {/* No Results */}
         {!loading && results.length === 0 && query && !error && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-12 text-center">
-            <svg
-              className="w-16 h-16 text-slate-400 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-slate-600 text-lg font-medium mb-2">
-              No results found
-            </p>
-            <p className="text-slate-500">
-              Try a different query or rephrase your question
-            </p>
+            <p className="text-slate-600 text-lg mb-2">No results found</p>
+            <p className="text-slate-500">Try a different query</p>
           </div>
         )}
       </div>
+
+      {selectedResolution && (
+        <ResolutionModal
+          title={selectedScenarioTitle}
+          steps={selectedResolution.steps}
+          stepType={selectedResolution.step_type}
+          isOpen={showResolutionModal}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   )
 }

@@ -30,3 +30,15 @@ CREATE TABLE IF NOT EXISTS isp_support.feedback (
 -- Create indexes for analytics queries
 CREATE INDEX IF NOT EXISTS feedback_scenario_id_idx ON isp_support.feedback(scenario_id);
 CREATE INDEX IF NOT EXISTS feedback_created_at_idx ON isp_support.feedback(created_at);
+
+-- Create resolutions table for step-by-step instructions
+CREATE TABLE IF NOT EXISTS isp_support.resolutions (
+    id SERIAL PRIMARY KEY,
+    scenario_id INTEGER NOT NULL UNIQUE REFERENCES isp_support.scenarios(id) ON DELETE CASCADE,
+    steps TEXT NOT NULL,
+    step_type VARCHAR(20) NOT NULL CHECK (step_type IN ('numbered', 'bullets')),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create index for lookups
+CREATE INDEX IF NOT EXISTS resolutions_scenario_id_idx ON isp_support.resolutions(scenario_id);

@@ -11,7 +11,8 @@
     "format:check": "prettier --check .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "seed:feedback": "tsx scripts/seed-feedback.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

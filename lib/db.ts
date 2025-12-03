@@ -14,7 +14,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Create connection pool
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 })
 
@@ -33,6 +33,16 @@ export interface Scenario {
   title: string
   description: string
   similarity?: number
+  helpful_count?: number
+  total_feedback?: number
+  helpful_percentage?: number
+}
+
+export interface Resolution {
+  id: number
+  scenario_id: number
+  steps: string[]
+  step_type: 'numbered' | 'bullets'
 }
 
 /**
@@ -46,14 +56,36 @@ export async function searchSimilarScenarios(
   limit: number = 5,
 ): Promise<Scenario[]> {
   const query = `
+        WITH ranked_scenarios AS (
+            SELECT 
+                s.id,
+                s.title,
+                s.description,
+                1 - (s.embedding <=> $1::vector) as similarity,
+                COALESCE(SUM(CASE WHEN f.rating = 1 THEN 1 ELSE 0 END), 0)::int as helpful_count,
+                COUNT(f.id)::int as total_feedback,
+                CASE 
+                    WHEN COUNT(f.id) > 0 THEN 
+                        ROUND((SUM(CASE WHEN f.rating = 1 THEN 1 ELSE 0 END)::numeric / COUNT(f.id)::numeric) * 100, 1)
+                    ELSE NULL
+                END as helpful_percentage,
+                ROW_NUMBER() OVER (PARTITION BY s.title ORDER BY s.embedding <=> $1::vector) as rn
+            FROM isp_support.scenarios s
+            LEFT JOIN isp_support.feedback f ON s.id = f.scenario_id
+            WHERE s.embedding IS NOT NULL
+            GROUP BY s.id, s.title, s.description, s.embedding
+        )
         SELECT 
             id,
             title,
             description,
-            1 - (embedding <=> $1::vector) as similarity
-        FROM isp_support.scenarios
-        WHERE embedding IS NOT NULL
-        ORDER BY embedding <=> $1::vector
+            similarity,
+            helpful_count,
+            total_feedback,
+            helpful_percentage
+        FROM ranked_scenarios
+        WHERE rn = 1
+        ORDER BY similarity DESC
         LIMIT $2
     `
 
@@ -115,6 +147,84 @@ export async function recordFeedback(
   } catch (error) {
     console.error('Error recording feedback:', error)
     // Don't throw - feedback is non-critical, don't break the app
+  }
+}
+
+/**
+ * Get resolution steps for a scenario
+ * @param scenarioId - The ID of the scenario
+ * @returns Resolution object with steps, or null if not found
+ */
+export async function getResolution(
+  scenarioId: number,
+): Promise<Resolution | null> {
+  const query = `
+    SELECT id, scenario_id, steps, step_type
+    FROM isp_support.resolutions
+    WHERE scenario_id = $1
+  `
+
+  try {
+    const result = await pool.query(query, [scenarioId])
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    const row = result.rows[0]
+    // Parse steps from JSON string or array
+    let steps: string[]
+    if (typeof row.steps === 'string') {
+      try {
+        steps = JSON.parse(row.steps)
+      } catch {
+        // If not JSON, treat as newline-separated
+        steps = row.steps.split('\n').filter((s: string) => s.trim())
+      }
+    } else if (Array.isArray(row.steps)) {
+      steps = row.steps
+    } else {
+      steps = []
+    }
+
+    return {
+      id: row.id,
+      scenario_id: row.scenario_id,
+      steps,
+      step_type: row.step_type,
+    }
+  } catch (error) {
+    console.error('Error fetching resolution:', error)
+    throw error
+  }
+}
+
+/**
+ * Insert a resolution with step-by-step instructions
+ * @param scenarioId - The ID of the scenario
+ * @param steps - Array of step strings
+ * @param stepType - 'numbered' or 'bullets'
+ */
+export async function insertResolution(
+  scenarioId: number,
+  steps: string[],
+  stepType: 'numbered' | 'bullets',
+): Promise<void> {
+  const query = `
+    INSERT INTO isp_support.resolutions (scenario_id, steps, step_type)
+    VALUES ($1, $2::jsonb, $3)
+    ON CONFLICT (scenario_id) DO UPDATE
+    SET steps = $2::jsonb, step_type = $3
+  `
+
+  try {
+    await pool.query(query, [
+      scenarioId,
+      JSON.stringify(steps),
+      stepType,
+    ])
+  } catch (error) {
+    console.error('Error inserting resolution:', error)
+    throw error
   }
 }
 
