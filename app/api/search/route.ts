@@ -5,14 +5,28 @@ import { searchSimilarScenarios } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { query } = body
+    const { query, type } = body
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
+    // Validate type if provided
+    if (type && type !== 'scenario' && type !== 'work_order') {
+      return NextResponse.json(
+        { error: 'Invalid type. Must be "scenario" or "work_order"' },
+        { status: 400 },
+      )
+    }
+
     const queryEmbedding = await generateEmbedding(query.trim())
-    const results = await searchSimilarScenarios(queryEmbedding, 5)
+    // Default to scenarios only unless explicitly searching for work orders
+    const searchType = type || 'scenario'
+    const results = await searchSimilarScenarios(
+      queryEmbedding,
+      5,
+      searchType as 'scenario' | 'work_order',
+    )
 
     return NextResponse.json({ results })
   } catch (error) {

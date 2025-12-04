@@ -13,6 +13,8 @@ interface SearchResult {
   id: number
   title: string
   description: string
+  type?: 'scenario' | 'work_order'
+  metadata?: Record<string, any>
   helpful_count?: number
   total_feedback?: number
   helpful_percentage?: number
@@ -71,13 +73,20 @@ export default function Home() {
   }
 
   const handleCardClick = async (scenarioId: number) => {
+    const result = results.find((r) => r.id === scenarioId)
+    
+    // Only handle scenarios (work orders are integrated into resolution steps)
+    if (result?.type === 'work_order') {
+      return
+    }
+
+    // Fetch resolution for scenarios
     try {
       const response = await fetch(`/api/resolution?scenarioId=${scenarioId}`)
       if (response.ok) {
         const resolution: Resolution = await response.json()
-        const scenario = results.find((r) => r.id === scenarioId)
         setSelectedResolution(resolution)
-        setSelectedScenarioTitle(scenario?.title || '')
+        setSelectedScenarioTitle(result?.title || '')
         setShowResolutionModal(true)
       }
     } catch (err) {

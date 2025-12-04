@@ -31,6 +31,8 @@ export interface Scenario {
   id: number
   title: string
   description: string
+  type?: 'scenario' | 'work_order'
+  metadata?: Record<string, any>
   similarity?: number
   helpful_count?: number
   total_feedback?: number
@@ -48,18 +50,27 @@ export interface Resolution {
  * Search for similar scenarios using cosine similarity
  * @param embedding - 384-dimensional embedding vector
  * @param limit - Maximum number of results to return (default: 5)
+ * @param type - Optional filter by type ('scenario' or 'work_order')
  * @returns Array of scenarios with similarity scores
  */
 export async function searchSimilarScenarios(
   embedding: number[],
   limit: number = 5,
+  type?: 'scenario' | 'work_order',
 ): Promise<Scenario[]> {
+  const typeFilter = type ? 'AND s.type = $3' : ''
+  const params = type
+    ? [`[${embedding.join(',')}]`, limit, type]
+    : [`[${embedding.join(',')}]`, limit]
+
   const query = `
         WITH ranked_scenarios AS (
             SELECT 
                 s.id,
                 s.title,
                 s.description,
+                s.type,
+                s.metadata,
                 1 - (s.embedding <=> $1::vector) as similarity,
                 COALESCE(SUM(CASE WHEN f.rating = 1 THEN 1 ELSE 0 END), 0)::int as helpful_count,
                 COUNT(f.id)::int as total_feedback,
@@ -72,12 +83,15 @@ export async function searchSimilarScenarios(
             FROM isp_support.scenarios s
             LEFT JOIN isp_support.feedback f ON s.id = f.scenario_id
             WHERE s.embedding IS NOT NULL
-            GROUP BY s.id, s.title, s.description, s.embedding
+            ${typeFilter}
+            GROUP BY s.id, s.title, s.description, s.type, s.metadata, s.embedding
         )
         SELECT 
             id,
             title,
             description,
+            type,
+            metadata,
             similarity,
             helpful_count,
             total_feedback,
@@ -90,10 +104,7 @@ export async function searchSimilarScenarios(
     `
 
   try {
-    const result: QueryResult<Scenario> = await pool.query(query, [
-      `[${embedding.join(',')}]`,
-      limit,
-    ])
+    const result: QueryResult<Scenario> = await pool.query(query, params)
 
     return result.rows
   } catch (error) {
@@ -107,19 +118,29 @@ export async function searchSimilarScenarios(
  * @param title - Scenario title
  * @param description - Scenario description
  * @param embedding - 384-dimensional embedding vector
+ * @param type - Type of entry ('scenario' or 'work_order', default: 'scenario')
+ * @param metadata - Optional metadata (JSON object)
  */
 export async function insertScenario(
   title: string,
   description: string,
   embedding: number[],
+  type: 'scenario' | 'work_order' = 'scenario',
+  metadata: Record<string, any> = {},
 ): Promise<void> {
   const query = `
-        INSERT INTO isp_support.scenarios (title, description, embedding)
-        VALUES ($1, $2, $3::vector)
+        INSERT INTO isp_support.scenarios (title, description, embedding, type, metadata)
+        VALUES ($1, $2, $3::vector, $4, $5::jsonb)
     `
 
   try {
-    await pool.query(query, [title, description, `[${embedding.join(',')}]`])
+    await pool.query(query, [
+      title,
+      description,
+      `[${embedding.join(',')}]`,
+      type,
+      JSON.stringify(metadata),
+    ])
   } catch (error) {
     console.error('Error inserting scenario:', error)
     throw error
@@ -220,6 +241,55 @@ export async function insertResolution(
     await pool.query(query, [scenarioId, JSON.stringify(steps), stepType])
   } catch (error) {
     console.error('Error inserting resolution:', error)
+    throw error
+  }
+}
+
+/**
+ * Get work order by name
+ * @param name - The name of the work order
+ * @returns Scenario object with work order data, or null if not found
+ */
+export async function getWorkOrderByName(
+  name: string,
+): Promise<Scenario | null> {
+  const query = `
+    SELECT id, title, description, type, metadata
+    FROM isp_support.scenarios
+    WHERE type = 'work_order' AND title = $1
+    LIMIT 1
+  `
+
+  try {
+    const result = await pool.query(query, [name])
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    return result.rows[0]
+  } catch (error) {
+    console.error('Error fetching work order:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all work order names for matching
+ * @returns Array of work order names
+ */
+export async function getAllWorkOrderNames(): Promise<string[]> {
+  const query = `
+    SELECT title
+    FROM isp_support.scenarios
+    WHERE type = 'work_order'
+    ORDER BY title
+  `
+
+  try {
+    const result = await pool.query(query)
+    return result.rows.map((row: { title: string }) => row.title)
+  } catch (error) {
+    console.error('Error fetching work order names:', error)
     throw error
   }
 }

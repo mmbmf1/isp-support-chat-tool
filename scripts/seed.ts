@@ -257,6 +257,96 @@ const scenarios = [
     description:
       'Customer needs to return equipment or get replacement for faulty equipment. Equipment is broken, customer is canceling service, or needs equipment swap. Verify equipment on account, process return authorization, provide return shipping label, schedule replacement delivery if needed, and confirm return receipt.',
   },
+  {
+    title: 'Service Reconnection Request',
+    description:
+      'Customer needs to reconnect internet service that was previously disconnected. Service may have been suspended due to account issues, non-payment, or customer request. Verify account status, resolve any outstanding issues, process payment if needed, and create Reconnect work order to restore service. May or may not require a technician visit depending on equipment needs.',
+  },
+  {
+    title: 'Change of Service Request',
+    description:
+      'Customer wants to change their service plan, modify service features, or update service configuration. This includes tier changes, feature additions, or service modifications. Create Change of Service work order to process the service change. No truck required for this work order type.',
+  },
+  {
+    title: 'Telephone Port Request',
+    description:
+      'Customer wants to port their existing telephone number to the service. This is a Change of Service operation specifically for telephone porting. Create COS - Telephone Port work order. This is time bound and customer service impacting. Conexon job only.',
+  },
+  {
+    title: 'Dark Fiber Activation Request',
+    description:
+      'Request to activate dark fiber service where Conexon leases out fiber to another company. This is a specialized activation type for business customers or wholesale arrangements. Create Dark Fiber Activation work order. No truck required.',
+  },
+  {
+    title: 'Drop Relocation Request',
+    description:
+      'Customer needs to relocate the fiber drop to a different location at their property. This may be needed due to construction, property changes, or service improvements. Create Drop Relocation work order to schedule the drop move.',
+  },
+  {
+    title: 'Equipment Shipment Request',
+    description:
+      'Customer needs equipment shipped or package modified. This work order handles equipment delivery and package changes without requiring a truck roll. Create Equip Ship - Pkg modify work order for equipment shipping needs.',
+  },
+  {
+    title: 'Inactive Drop Service Issue',
+    description:
+      'Inactive customer has a problem with their drop that needs to be fixed. This could be due to storm damage, disconnection for non-payment, or other issues affecting the drop. Create Inactive - Drop Service Call work order to address the drop problem for inactive customers.',
+  },
+  {
+    title: 'Native Telephone Activation',
+    description:
+      'Customer wants to activate native telephone service (new telephone number, not ported). This requires creating an Activate Native Telephone work order. Service is time bound with Date of Install SLA, customer service impacting, and Conexon job only.',
+  },
+  {
+    title: 'Ported Telephone Activation',
+    description:
+      'Customer wants to activate telephone service by porting their existing number from another provider. Create Activate Ported Telephone work order. This is time bound with Date of Install SLA, customer service impacting, and Conexon job only.',
+  },
+  {
+    title: 'Drop Connect Work Order',
+    description:
+      'Work order needed to connect the drop to the customer premises. This is typically part of a new installation or service restoration. Create Drop Connect WO work order. Customer service impacting with SLA by date of install.',
+  },
+  {
+    title: 'Drop Service Issue',
+    description:
+      'Issue with the drop that requires a technician to review. May or may not be service impacting. This was previously an SRV work order type. Create Drop Service Call work order. Time bound with 24hr SLA, may or may not be customer service impacting.',
+  },
+  {
+    title: 'MBM Activation Request',
+    description:
+      'Request to activate MBM (Multi-Building/Multi-Tenant) service. This is for commercial or multi-unit installations. Create MBM Activate work order. Time bound with Date of Install SLA and customer service impacting.',
+  },
+  {
+    title: 'Residential Site Survey Request',
+    description:
+      'Residential customer needs a site survey before installation. Flint only and in-house as of 12/12. Create Resi Site Survey work order. Time bound with 7 day SLA, not customer service impacting, Conexon job only.',
+  },
+  {
+    title: 'Temp Drop Follow-Up Required',
+    description:
+      'Field tech created a temporary drop during install or service call, but follow-up work is required to complete the drop. This typically occurs during cold seasons when ground work cannot be completed, or when locates did not happen in time. Create Temp Drop - Follow-Up WO work order. 7 day SLA, not customer service impacting.',
+  },
+  {
+    title: 'Temp Drop Bury Required',
+    description:
+      'Temporary drop is in place but follow-up is required to finalize whether the drop should be buried or aerial. These typically occur during cold seasons or when tech did not create a follow-up work order within 24 hours. Create Temp Drop Bury work order. 7 day SLA, not customer service impacting.',
+  },
+  {
+    title: 'Commercial Internet Activation',
+    description:
+      'Commercial customer needs internet service activated. Commercial installations have longer timelines and dates may get continuously pushed out. Create Commercial Internet work order. Time bound with 42 day SLA, customer service impacting, Conexon job only.',
+  },
+  {
+    title: 'Commercial Site Survey Request',
+    description:
+      'Commercial customer needs a site survey before installation. Commercial surveys help determine installation requirements and feasibility. Create Commercial Site Survey work order. 7 day SLA, customer service impacting, Conexon job only. Dates may get continuously pushed out.',
+  },
+  {
+    title: 'Commercial Telephone Activation',
+    description:
+      'Commercial customer needs telephone service activated. Commercial telephone installations have longer timelines. Create Commercial Telephone work order. Time bound with 42 day SLA, customer service impacting, Conexon job only. Dates may get continuously pushed out.',
+  },
 ]
 
 // Resolution steps for each scenario
@@ -361,7 +451,7 @@ const resolutions = [
       'Ensure fiber cable is not bent beyond minimum bend radius',
       'Contact ISP immediately - fiber damage requires technician visit',
       'Do not touch exposed fiber ends (can cause eye injury)',
-      'Schedule service appointment for fiber cable replacement',
+      'Create a Service Call work order to schedule service appointment for fiber cable replacement',
     ],
     stepType: 'numbered' as const,
   },
@@ -437,6 +527,8 @@ const resolutions = [
       'Check router logs for error messages or disconnection patterns',
       'Monitor signal quality metrics in router admin panel',
       'Test at different times to identify interference patterns',
+      'If drop issue is suspected, create a Drop Service Call work order',
+      'If technician visit is needed, create a Service Call work order',
       'Contact ISP to check line quality and signal stability from their end',
     ],
     stepType: 'numbered' as const,
@@ -563,6 +655,7 @@ const resolutions = [
       'Make payment for any outstanding balance',
       'Verify account information is current and accurate',
       'Request service restoration after payment is processed',
+      'If service needs to be reconnected, create a Reconnect work order',
       'Wait 15-30 minutes for service to be reactivated',
       'Power cycle router after service is restored',
     ],
@@ -782,7 +875,7 @@ const resolutions = [
       'Review any scheduled maintenance in area',
       'Provide estimated restoration time if outage confirmed',
       'Create service ticket if no known outage found',
-      'Schedule technician visit if needed',
+      'If technician visit is needed, create a Service Call work order',
       'Follow up with customer on resolution',
     ],
     stepType: 'numbered' as const,
@@ -858,6 +951,7 @@ const resolutions = [
       'Check service availability at installation address',
       'Schedule installation appointment or provide self-install kit',
       'Confirm equipment delivery if applicable',
+      'If installation is required, create an Activate Internet work order',
       'Provide activation instructions for self-install',
       'Verify service activation date and time',
       'Provide customer with account login credentials',
@@ -869,12 +963,220 @@ const resolutions = [
     steps: [
       'Verify equipment on customer account',
       'Check if equipment return is required (cancellation) or replacement needed',
+      'If return is required, create a Return of Equipment work order',
       'Process return authorization and generate return label',
       'Provide return shipping instructions',
       'Schedule replacement equipment delivery if needed',
       'Confirm return deadline and shipping address',
       'Track return shipment and confirm receipt',
       'Update account once equipment is received',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer account status and service history',
+      'Check if service was disconnected due to non-payment or account issues',
+      'Resolve any outstanding account issues or payments',
+      'Verify service availability at customer address',
+      'Create a Reconnect work order to restore service',
+      'Schedule reconnection appointment if technician visit is required',
+      'Confirm reconnection date and time with customer',
+      'Test service activation after reconnection',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Review customer current service plan and requested changes',
+      'Verify eligibility for requested service change',
+      'Explain any pricing or feature differences',
+      'Create a Change of Service work order',
+      'Process service change request',
+      'Confirm changes with customer',
+      'Update account with new service details',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer wants to port existing telephone number',
+      'Collect porting information from customer',
+      'Check porting eligibility and requirements',
+      'Create a COS - Telephone Port work order',
+      'Schedule porting date (time bound)',
+      'Confirm porting details with customer',
+      'Monitor porting process and notify customer of completion',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify dark fiber activation request details',
+      'Confirm business customer or wholesale arrangement',
+      'Review lease agreement if applicable',
+      'Create a Dark Fiber Activation work order',
+      'Schedule activation date',
+      'Coordinate with network operations',
+      'Confirm activation completion',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify drop relocation request and reason',
+      'Check new location feasibility',
+      'Schedule drop relocation appointment',
+      'Create a Drop Relocation work order',
+      'Coordinate with field operations',
+      'Confirm relocation completion with customer',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify equipment shipment or package modification needed',
+      'Check equipment availability',
+      'Create an Equip Ship - Pkg modify work order',
+      'Process equipment order',
+      'Provide shipping tracking information',
+      'Confirm equipment delivery',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer is inactive and drop issue exists',
+      'Check reason for inactivity (storm damage, non-payment, etc.)',
+      'Assess drop problem severity',
+      'Create an Inactive - Drop Service Call work order',
+      'Schedule technician visit if needed',
+      'Coordinate drop repair',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer wants native telephone service',
+      'Check service availability for telephone',
+      'Create an Activate Native Telephone work order',
+      'Schedule installation date (time bound, Date of Install SLA)',
+      'Confirm activation details with customer',
+      'Coordinate installation and activation',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer wants to port existing telephone number',
+      'Collect porting information and authorization',
+      'Check porting eligibility',
+      'Create an Activate Ported Telephone work order',
+      'Schedule porting date (time bound, Date of Install SLA)',
+      'Monitor porting process',
+      'Confirm porting completion',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify drop connection is needed',
+      'Check installation or service restoration requirements',
+      'Create a Drop Connect WO work order',
+      'Schedule connection date (SLA by date of install)',
+      'Coordinate with field operations',
+      'Confirm drop connection completion',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify drop service issue reported',
+      'Assess if issue is service impacting',
+      'Create a Drop Service Call work order',
+      'Schedule technician visit (24hr SLA, time bound)',
+      'Dispatch technician to review drop',
+      'Follow up on resolution',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify MBM activation request',
+      'Check multi-building or multi-tenant requirements',
+      'Create an MBM Activate work order',
+      'Schedule activation date (Date of Install SLA, time bound)',
+      'Coordinate with commercial operations',
+      'Confirm MBM activation completion',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify residential site survey is needed',
+      'Check if customer is in Flint area (in-house as of 12/12)',
+      'Create a Resi Site Survey work order',
+      'Schedule survey appointment (7 day SLA, time bound)',
+      'Coordinate with in-house survey team',
+      'Review survey results and proceed with installation planning',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify temp drop was created and follow-up is needed',
+      'Check reason for temp drop (cold season, locates delayed, etc.)',
+      'Create a Temp Drop - Follow-Up WO work order',
+      'Schedule follow-up when conditions allow (7 day SLA)',
+      'Coordinate final drop completion',
+      'Confirm permanent drop installation',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify temp drop is in place and needs finalization',
+      'Check if tech created FWO within 24 hours (if not, this WO is created)',
+      'Determine if drop should be buried or aerial',
+      'Create a Temp Drop Bury work order',
+      'Schedule bury work when ground conditions allow (7 day SLA)',
+      'Complete permanent drop installation',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify commercial internet activation request',
+      'Review commercial service requirements',
+      'Create a Commercial Internet work order',
+      'Schedule activation date (42 day SLA, time bound)',
+      'Note: Commercial dates may get continuously pushed out',
+      'Coordinate with commercial operations team',
+      'Confirm commercial internet activation',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify commercial site survey request',
+      'Review commercial installation requirements',
+      'Create a Commercial Site Survey work order',
+      'Schedule survey appointment (7 day SLA, customer service impacting)',
+      'Note: Commercial dates may get continuously pushed out',
+      'Coordinate survey with commercial team',
+      'Review survey results for installation planning',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify commercial telephone activation request',
+      'Review commercial telephone service requirements',
+      'Create a Commercial Telephone work order',
+      'Schedule activation date (42 day SLA, time bound)',
+      'Note: Commercial dates may get continuously pushed out',
+      'Coordinate with commercial operations team',
+      'Confirm commercial telephone activation',
     ],
     stepType: 'numbered' as const,
   },
@@ -940,7 +1242,7 @@ async function seedDatabase() {
       await insertResolution(scenarioId, resolution.steps, resolution.stepType)
 
       console.log(
-        `✓ Inserted resolution for scenario ID ${scenarioId} (${scenario.title})`,
+        `✓ Inserted/updated resolution for scenario ID ${scenarioId} (${scenario.title})`,
       )
     }
 
