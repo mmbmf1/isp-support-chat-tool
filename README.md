@@ -1,15 +1,5 @@
 # Support Chat Tool
 
-Semantic search tool for support scenarios using embeddings and PostgreSQL with pgvector.
-
-## Features
-
-- Semantic search for troubleshooting scenarios
-- Knowledge base types: scenarios, work orders, equipment, outages, policies, references
-- Clickable references in resolution steps
-- Work order scheduling with time slot selection
-- Feedback system
-
 ## Setup
 
 **Prerequisites**: Node.js 18+, Docker
@@ -27,10 +17,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ## Scripts
 
 - `npm run dev` - Development server
-- `npm run seed` - Seed all data (scenarios, work orders, equipment, outages, policies, references, subscribers)
+- `npm run migrate` - Run database migrations
+- `npm run seed` - Seed all data
 - `npm run docker:up` - Start database
 - `npm run docker:down` - Stop database
-
-## Tech Stack
-
-- Next.js, PostgreSQL with pgvector, transformers.js (384-dim embeddings)
