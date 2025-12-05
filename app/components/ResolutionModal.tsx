@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   XMarkIcon,
   HandThumbUpIcon,
   HandThumbDownIcon,
   CheckCircleIcon,
   InformationCircleIcon,
+  ArrowPathIcon,
+  BoltIcon,
 } from '@heroicons/react/24/outline'
 import ScheduleWorkOrderModal from './ScheduleWorkOrderModal'
 import KnowledgeBaseItemDisplay from './KnowledgeBaseItemDisplay'
@@ -27,11 +29,23 @@ interface KnowledgeBaseItem {
   id: number
   title: string
   description: string
-  type: 'work_order' | 'equipment' | 'outage' | 'policy' | 'reference' | 'subscriber'
+  type:
+    | 'work_order'
+    | 'equipment'
+    | 'outage'
+    | 'policy'
+    | 'reference'
+    | 'subscriber'
   metadata?: Record<string, any>
 }
 
-type KnowledgeBaseType = 'work_order' | 'equipment' | 'outage' | 'policy' | 'reference' | 'subscriber'
+type KnowledgeBaseType =
+  | 'work_order'
+  | 'equipment'
+  | 'outage'
+  | 'policy'
+  | 'reference'
+  | 'subscriber'
 
 interface TypeNames {
   work_order: string[]
@@ -66,38 +80,115 @@ export default function ResolutionModal({
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [isUpdateSubscriberModalOpen, setIsUpdateSubscriberModalOpen] =
     useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [actionResults, setActionResults] = useState<Record<string, any>>({})
+  const [availableActions, setAvailableActions] = useState<
+    Array<{
+      type: string
+      label: string
+      params: Record<string, any>
+      icon: React.ReactNode
+    }>
+  >([])
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  const logAction = (
+    actionType: string,
+    itemName: string,
+    itemType: string,
+  ) => {
+    fetch('/api/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actionType, itemName, itemType, scenarioId }),
+    }).catch(() => {})
+  }
 
   useEffect(() => {
-    if (isOpen) {
-      // Fetch all knowledge base type names
-      const fetchAllNames = async () => {
-        try {
-          const [workOrders, equipment, outages, policies, references, subscribers] =
-            await Promise.all([
-              fetch('/api/work-order').then((r) => r.json()),
-              fetch('/api/knowledge-base?type=equipment').then((r) => r.json()),
-              fetch('/api/knowledge-base?type=outage').then((r) => r.json()),
-              fetch('/api/knowledge-base?type=policy').then((r) => r.json()),
-              fetch('/api/knowledge-base?type=reference').then((r) => r.json()),
-              fetch('/api/knowledge-base?type=subscriber').then((r) => r.json()),
-            ])
+    if (!isOpen) return
 
-          setTypeNames({
+    Promise.all([
+      fetch('/api/work-order').then((r) => r.json()),
+      fetch('/api/knowledge-base?type=equipment').then((r) => r.json()),
+      fetch('/api/knowledge-base?type=outage').then((r) => r.json()),
+      fetch('/api/knowledge-base?type=policy').then((r) => r.json()),
+      fetch('/api/knowledge-base?type=reference').then((r) => r.json()),
+      fetch('/api/knowledge-base?type=subscriber').then((r) => r.json()),
+    ])
+      .then(
+        ([
+          workOrders,
+          equipment,
+          outages,
+          policies,
+          references,
+          subscribers,
+        ]) => {
+          const names = {
             work_order: workOrders.names || [],
             equipment: equipment.names || [],
             outage: outages.names || [],
             policy: policies.names || [],
             reference: references.names || [],
             subscriber: subscribers.names || [],
-          })
-        } catch (err) {
-          console.error('Failed to fetch knowledge base names:', err)
-        }
-      }
+          }
+          setTypeNames(names)
 
-      fetchAllNames()
-    }
-  }, [isOpen])
+          const actions: Array<{
+            type: string
+            label: string
+            params: Record<string, any>
+            icon: React.ReactNode
+          }> = []
+          const addedTypes = new Set<string>()
+
+          steps.forEach((step) => {
+            const resetRouterMatch = step.match(/\b(reset|restart).*router\b/i)
+            const speedTestMatch =
+              step.match(
+                /\b(run|perform|execute|speed\s+test).*speed\s+test\b/i,
+              ) || step.match(/\bspeed\s+test\b/i)
+            const restartEquipmentMatch = step.match(
+              /\b(restart|reboot).*(?:equipment|ONT|modem)\b/i,
+            )
+
+            if (resetRouterMatch && !addedTypes.has('reset-router')) {
+              actions.push({
+                type: 'reset-router',
+                label: 'Reset Router',
+                params: { equipmentName: names.equipment[0] || 'Router' },
+                icon: <BoltIcon className="w-4 h-4" />,
+              })
+              addedTypes.add('reset-router')
+            } else if (speedTestMatch && !addedTypes.has('speed-test')) {
+              actions.push({
+                type: 'speed-test',
+                label: 'Speed Test',
+                params: { subscriberName: names.subscriber[0] || 'Subscriber' },
+                icon: <BoltIcon className="w-4 h-4" />,
+              })
+              addedTypes.add('speed-test')
+            } else if (
+              restartEquipmentMatch &&
+              !addedTypes.has('restart-equipment')
+            ) {
+              actions.push({
+                type: 'restart-equipment',
+                label: 'Restart Equipment',
+                params: {
+                  equipmentName: names.equipment[0] || 'Equipment',
+                  equipmentType: 'ONT',
+                },
+                icon: <ArrowPathIcon className="w-4 h-4" />,
+              })
+              addedTypes.add('restart-equipment')
+            }
+          })
+          setAvailableActions(actions)
+        },
+      )
+      .catch(() => {})
+  }, [isOpen, steps])
 
   /**
    * Finds a knowledge base item name in text based on type-specific patterns
@@ -106,7 +197,11 @@ export default function ResolutionModal({
     text: string,
     names: string[],
     type: KnowledgeBaseType,
-  ): { name: string; match: RegExpMatchArray; type: KnowledgeBaseType } | null => {
+  ): {
+    name: string
+    match: RegExpMatchArray
+    type: KnowledgeBaseType
+  } | null => {
     if (!names.length) return null
 
     // Sort names by length (longest first) to avoid partial matches
@@ -128,31 +223,46 @@ export default function ResolutionModal({
           break
         case 'equipment':
           patterns = [
-            new RegExp(`\\b(refer to|check|see|view)\\s+(the\\s+)?(${escapedName})\\b`, 'i'),
+            new RegExp(
+              `\\b(refer to|check|see|view)\\s+(the\\s+)?(${escapedName})\\b`,
+              'i',
+            ),
             new RegExp(`\\b(${escapedName})\\b`, 'i'),
           ]
           break
         case 'outage':
           patterns = [
-            new RegExp(`\\b(check|view|see)\\s+(the\\s+)?(${escapedName})\\b`, 'i'),
+            new RegExp(
+              `\\b(check|view|see)\\s+(the\\s+)?(${escapedName})\\b`,
+              'i',
+            ),
             new RegExp(`\\b(${escapedName})\\b`, 'i'),
           ]
           break
         case 'policy':
           patterns = [
-            new RegExp(`\\b(refer to|check|see|follow)\\s+(the\\s+)?(${escapedName})\\b`, 'i'),
+            new RegExp(
+              `\\b(refer to|check|see|follow)\\s+(the\\s+)?(${escapedName})\\b`,
+              'i',
+            ),
             new RegExp(`\\b(${escapedName})\\b`, 'i'),
           ]
           break
         case 'reference':
           patterns = [
-            new RegExp(`\\b(refer to|check|see|use)\\s+(the\\s+)?(${escapedName})\\b`, 'i'),
+            new RegExp(
+              `\\b(refer to|check|see|use)\\s+(the\\s+)?(${escapedName})\\b`,
+              'i',
+            ),
             new RegExp(`\\b(${escapedName})\\b`, 'i'),
           ]
           break
         case 'subscriber':
           patterns = [
-            new RegExp(`\\b(use|update|check|refer to)\\s+(the\\s+)?(${escapedName})\\b`, 'i'),
+            new RegExp(
+              `\\b(use|update|check|refer to)\\s+(the\\s+)?(${escapedName})\\b`,
+              'i',
+            ),
             new RegExp(`\\b(${escapedName})\\b`, 'i'),
           ]
           break
@@ -169,26 +279,85 @@ export default function ResolutionModal({
   }
 
   const handleItemClick = async (name: string, type: KnowledgeBaseType) => {
-    try {
-      let response
-      if (type === 'work_order') {
-        response = await fetch(
-          `/api/work-order?name=${encodeURIComponent(name)}`,
-        )
-      } else {
-        response = await fetch(
-          `/api/knowledge-base?name=${encodeURIComponent(name)}&type=${type}`,
-        )
-      }
+    logAction('view_knowledge_base', name, type)
+    const url =
+      type === 'work_order'
+        ? `/api/work-order?name=${encodeURIComponent(name)}`
+        : `/api/knowledge-base?name=${encodeURIComponent(name)}&type=${type}`
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${type}`)
-      }
+    const response = await fetch(url)
+    if (response.ok) {
       const item = await response.json()
       setSelectedItem({ ...item, type })
-    } catch (err) {
-      console.error(`Failed to fetch ${type}:`, err)
     }
+  }
+
+  const handleAction = async (
+    actionType: string,
+    params: Record<string, any> = {},
+  ) => {
+    setActionLoading(actionType)
+    logAction(
+      `execute_${actionType}`,
+      params.equipmentName || params.subscriberName || '',
+      '',
+    )
+
+    try {
+      const response = await fetch(`/api/actions/${actionType}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setActionResults({ ...actionResults, [actionType]: result })
+        setTimeout(() => {
+          setActionResults((prev) => {
+            const next = { ...prev }
+            delete next[actionType]
+            return next
+          })
+        }, 5000)
+      }
+    } catch {
+      // Ignore errors
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const renderActionButton = (
+    actionType: string,
+    label: string,
+    params: Record<string, any>,
+    icon: React.ReactNode,
+  ) => {
+    const isLoading = actionLoading === actionType
+    const result = actionResults[actionType]
+
+    return (
+      <div className="inline-flex items-center gap-2">
+        <button
+          onClick={() => handleAction(actionType, params)}
+          disabled={isLoading}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:border-emerald-300"
+        >
+          {isLoading ? (
+            <ArrowPathIcon className="w-4 h-4 animate-spin" />
+          ) : (
+            icon
+          )}
+          <span>{isLoading ? 'Processing...' : label}</span>
+        </button>
+        {result && (
+          <span className="text-xs text-emerald-600 font-medium">
+            ✓ {result.message || 'Success'}
+          </span>
+        )}
+      </div>
+    )
   }
 
   const renderStepWithKnowledgeBase = (step: string) => {
@@ -212,7 +381,6 @@ export default function ResolutionModal({
         const beforeMatch = step.substring(0, matchIndex)
         const afterMatch = step.substring(matchIndex + regexMatch[0].length)
 
-        // Extract the actual name from the match
         let itemName = name
         if (matchType === 'work_order') {
           itemName = regexMatch[3] || regexMatch[1] || name
@@ -238,7 +406,6 @@ export default function ResolutionModal({
             </span>
           )
         } else {
-          // For other types, extract name from match groups
           itemName = regexMatch[3] || regexMatch[1] || name
 
           return (
@@ -261,17 +428,49 @@ export default function ResolutionModal({
     return <span>{step}</span>
   }
 
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleEscape)
+
+    const firstFocusable = modalRef.current?.querySelector(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    ) as HTMLElement
+    firstFocusable?.focus()
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="resolution-title"
+    >
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        ref={modalRef}
+        className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+      >
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
+          <h2
+            id="resolution-title"
+            className="text-2xl font-bold text-slate-800"
+          >
+            {title}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
@@ -282,31 +481,48 @@ export default function ResolutionModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
+          {availableActions.length > 0 && (
+            <div className="mb-6 bg-emerald-50/50 rounded-xl border border-emerald-200/50 p-4">
+              <h3 className="text-sm font-semibold text-emerald-800 mb-3">
+                Actions
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {availableActions.map((action, idx) => (
+                  <div key={`${action.type}-${idx}`}>
+                    {renderActionButton(
+                      action.type,
+                      action.label,
+                      action.params,
+                      action.icon,
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <h3 className="text-lg font-semibold text-slate-700 mb-4">
             Resolution Steps
           </h3>
           <ol className="space-y-3">
-            {stepType === 'numbered' ? (
-              steps.map((step, index) => (
-                <li key={index} className="flex gap-3">
-                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold flex items-center justify-center text-sm">
-                    {index + 1}
-                  </span>
-                  <span className="flex-1 text-slate-700 leading-relaxed pt-1">
-                    {renderStepWithKnowledgeBase(step)}
-                  </span>
-                </li>
-              ))
-            ) : (
-              steps.map((step, index) => (
-                <li key={index} className="flex gap-3">
-                  <span className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 mt-2.5" />
-                  <span className="flex-1 text-slate-700 leading-relaxed">
-                    {renderStepWithKnowledgeBase(step)}
-                  </span>
-                </li>
-              ))
-            )}
+            {stepType === 'numbered'
+              ? steps.map((step, index) => (
+                  <li key={index} className="flex gap-3">
+                    <span className="shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold flex items-center justify-center text-sm">
+                      {index + 1}
+                    </span>
+                    <span className="flex-1 text-slate-700 leading-relaxed pt-1">
+                      {renderStepWithKnowledgeBase(step)}
+                    </span>
+                  </li>
+                ))
+              : steps.map((step, index) => (
+                  <li key={index} className="flex gap-3">
+                    <span className="shrink-0 w-2 h-2 rounded-full bg-blue-500 mt-2.5" />
+                    <span className="flex-1 text-slate-700 leading-relaxed">
+                      {renderStepWithKnowledgeBase(step)}
+                    </span>
+                  </li>
+                ))}
           </ol>
 
           {selectedItem && (
@@ -315,12 +531,26 @@ export default function ResolutionModal({
               onClose={() => setSelectedItem(null)}
               onScheduleWorkOrder={
                 selectedItem.type === 'work_order'
-                  ? () => setIsScheduleModalOpen(true)
+                  ? () => {
+                      logAction(
+                        'click_schedule_work_order',
+                        selectedItem.title,
+                        'work_order',
+                      )
+                      setIsScheduleModalOpen(true)
+                    }
                   : undefined
               }
               onUpdateSubscriber={
                 selectedItem.type === 'subscriber'
-                  ? () => setIsUpdateSubscriberModalOpen(true)
+                  ? () => {
+                      logAction(
+                        'click_update_subscriber',
+                        selectedItem.title,
+                        'subscriber',
+                      )
+                      setIsUpdateSubscriberModalOpen(true)
+                    }
                   : undefined
               }
             />

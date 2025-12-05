@@ -18,6 +18,7 @@ const seedScripts = [
   'seed-policies.ts',
   'seed-references.ts',
   'seed-subscribers.ts',
+  'seed-feedback.ts',
 ]
 
 async function seedAll() {

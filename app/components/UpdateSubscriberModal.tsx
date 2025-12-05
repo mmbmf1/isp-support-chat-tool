@@ -114,6 +114,19 @@ export default function UpdateSubscriberModal({
 
       const data = await response.json()
       setUpdatedSubscriber(data)
+
+      // Log the action (non-blocking)
+      fetch('/api/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'update_subscriber',
+          itemName: subscriber.title,
+          itemType: 'subscriber',
+        }),
+      }).catch(() => {
+        // Silently handle errors
+      })
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to update subscriber data',

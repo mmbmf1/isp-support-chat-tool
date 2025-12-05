@@ -31,7 +31,14 @@ export interface Scenario {
   id: number
   title: string
   description: string
-  type?: 'scenario' | 'work_order' | 'equipment' | 'outage' | 'policy' | 'reference' | 'subscriber'
+  type?:
+    | 'scenario'
+    | 'work_order'
+    | 'equipment'
+    | 'outage'
+    | 'policy'
+    | 'reference'
+    | 'subscriber'
   metadata?: Record<string, any>
   similarity?: number
   helpful_count?: number
@@ -56,7 +63,14 @@ export interface Resolution {
 export async function searchSimilarScenarios(
   embedding: number[],
   limit: number = 5,
-  type?: 'scenario' | 'work_order' | 'equipment' | 'outage' | 'policy' | 'reference' | 'subscriber',
+  type?:
+    | 'scenario'
+    | 'work_order'
+    | 'equipment'
+    | 'outage'
+    | 'policy'
+    | 'reference'
+    | 'subscriber',
 ): Promise<Scenario[]> {
   const typeFilter = type ? 'AND s.type = $3' : ''
   const params = type
@@ -125,7 +139,14 @@ export async function insertScenario(
   title: string,
   description: string,
   embedding: number[],
-  type: 'scenario' | 'work_order' | 'equipment' | 'outage' | 'policy' | 'reference' | 'subscriber' = 'scenario',
+  type:
+    | 'scenario'
+    | 'work_order'
+    | 'equipment'
+    | 'outage'
+    | 'policy'
+    | 'reference'
+    | 'subscriber' = 'scenario',
   metadata: Record<string, any> = {},
 ): Promise<void> {
   const query = `
@@ -256,7 +277,7 @@ export async function getWorkOrderByName(
   const query = `
     SELECT id, title, description, type, metadata
     FROM isp_support.scenarios
-    WHERE type = 'work_order' AND title = $1
+    WHERE type = 'work_order' AND LOWER(TRIM(title)) = LOWER(TRIM($1))
     LIMIT 1
   `
 
@@ -269,6 +290,29 @@ export async function getWorkOrderByName(
     return result.rows[0]
   } catch (error) {
     console.error('Error fetching work order:', error)
+    throw error
+  }
+}
+
+export async function getScenarioByTitle(
+  title: string,
+): Promise<Scenario | null> {
+  const query = `
+    SELECT id, title, description, type, metadata
+    FROM isp_support.scenarios
+    WHERE type = 'scenario' AND LOWER(TRIM(title)) = LOWER(TRIM($1))
+    LIMIT 1
+  `
+
+  try {
+    const result = await pool.query(query, [title])
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    return result.rows[0]
+  } catch (error) {
+    console.error('Error fetching scenario by title:', error)
     throw error
   }
 }
@@ -307,7 +351,7 @@ export async function getKnowledgeBaseItemByName(
   const query = `
     SELECT id, title, description, type, metadata
     FROM isp_support.scenarios
-    WHERE type = $1 AND title = $2
+    WHERE type = $1 AND LOWER(TRIM(title)) = LOWER(TRIM($2))
     LIMIT 1
   `
 
@@ -348,9 +392,231 @@ export async function getAllKnowledgeBaseNames(
   }
 }
 
-/**
- * Close the database connection pool
- */
+export async function logSearch(query: string): Promise<void> {
+  const trimmedQuery = query.trim()
+  if (!trimmedQuery) return
+
+  const logQuery = `
+    INSERT INTO isp_support.searches (query)
+    VALUES ($1)
+  `
+
+  pool.query(logQuery, [trimmedQuery]).catch(() => {})
+}
+
+export interface TopSearch {
+  query: string
+  count: number
+  itemType?: string
+  isKnowledgeBase?: boolean
+}
+
+export async function getTopKnowledgeBaseItems(
+  limit: number = 10,
+  days: number | null = 30,
+): Promise<TopSearch[]> {
+  const actionDateFilter = days
+    ? `AND created_at >= NOW() - INTERVAL '${days} days'`
+    : ''
+
+  const actionQuery = `
+    SELECT 
+      LOWER(TRIM(item_name)) as query,
+      COUNT(*)::int as count,
+      item_type as item_type,
+      true as is_knowledge_base
+    FROM isp_support.actions
+    WHERE action_type IN ('view_knowledge_base', 'click_schedule_work_order', 'click_update_subscriber')
+      AND item_name IS NOT NULL
+      ${actionDateFilter}
+    GROUP BY LOWER(TRIM(item_name)), item_type
+    ORDER BY count DESC, query ASC
+    LIMIT $1
+  `
+
+  try {
+    try {
+      const result = await pool.query(actionQuery, [limit])
+      if (result.rows.length > 0) {
+        return result.rows.map(
+          (row: {
+            query: string
+            count: number
+            item_type: string | null
+            is_knowledge_base: boolean
+          }) => ({
+            query: row.query,
+            count: row.count,
+            itemType: row.item_type || undefined,
+            isKnowledgeBase: true,
+          }),
+        )
+      }
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        // Table doesn't exist, fall through to fallback
+      } else {
+        throw error
+      }
+    }
+
+    const fallbackQuery = `
+      SELECT 
+        LOWER(TRIM(title)) as query,
+        0 as count,
+        type as item_type,
+        true as is_knowledge_base
+      FROM isp_support.scenarios
+      WHERE type IN ('equipment', 'outage', 'policy', 'reference', 'subscriber', 'work_order')
+      GROUP BY LOWER(TRIM(title)), type
+      ORDER BY query ASC
+      LIMIT $1
+    `
+    const fallbackResult = await pool.query(fallbackQuery, [limit])
+    return fallbackResult.rows.map(
+      (row: {
+        query: string
+        count: number
+        item_type: string | null
+        is_knowledge_base: boolean
+      }) => ({
+        query: row.query,
+        count: row.count,
+        itemType: row.item_type || undefined,
+        isKnowledgeBase: true,
+      }),
+    )
+  } catch (error) {
+    console.error('Error fetching top knowledge base items:', error)
+    throw error
+  }
+}
+
+export interface HelpfulSearch {
+  query: string
+  helpfulCount: number
+  notHelpfulCount: number
+  totalFeedback: number
+  helpfulPercentage: number
+}
+
+export async function getHelpfulSearches(
+  limit: number = 10,
+  days: number | null = 30,
+): Promise<HelpfulSearch[]> {
+  const params: any[] = [limit]
+  const dateFilter = days
+    ? `AND f.created_at >= NOW() - INTERVAL '${days} days'`
+    : ''
+
+  const query = `
+    WITH ScenarioFeedback AS (
+      SELECT
+        s.id AS scenario_id,
+        s.title,
+        s.description,
+        COUNT(*) FILTER (WHERE f.rating = 1)::int as helpful_count,
+        COUNT(*) FILTER (WHERE f.rating = -1)::int as not_helpful_count,
+        COUNT(f.id)::int as total_feedback,
+        ROUND(
+          ((COUNT(*) FILTER (WHERE f.rating = 1)::numeric / NULLIF(COUNT(f.id), 0)) * 100)::numeric,
+          1
+        ) as helpful_percentage
+      FROM isp_support.scenarios s
+      JOIN isp_support.feedback f ON s.id = f.scenario_id
+      WHERE s.type = 'scenario'
+        ${dateFilter}
+      GROUP BY s.id, s.title, s.description
+      HAVING COUNT(f.id) >= 2
+    )
+    SELECT
+      title as query,
+      helpful_count,
+      not_helpful_count,
+      total_feedback,
+      helpful_percentage
+    FROM ScenarioFeedback
+    ORDER BY helpful_count DESC, helpful_percentage DESC, total_feedback DESC
+    LIMIT $1
+  `
+
+  try {
+    const result = await pool.query(query, params)
+    return result.rows.map((row) => ({
+      query: row.query,
+      helpfulCount: row.helpful_count || 0,
+      notHelpfulCount: row.not_helpful_count || 0,
+      totalFeedback: row.total_feedback || 0,
+      helpfulPercentage: parseFloat(row.helpful_percentage || '0'),
+    }))
+  } catch (error) {
+    console.error('Error fetching helpful searches:', error)
+    throw error
+  }
+}
+
+export async function logAction(
+  actionType: string,
+  itemName?: string,
+  itemType?: string,
+  scenarioId?: number,
+): Promise<void> {
+  const logQuery = `
+    INSERT INTO isp_support.actions (action_type, item_name, item_type, scenario_id)
+    VALUES ($1, $2, $3, $4)
+  `
+
+  pool
+    .query(logQuery, [
+      actionType,
+      itemName || null,
+      itemType || null,
+      scenarioId || null,
+    ])
+    .catch(() => {})
+}
+
+export interface TopAction {
+  actionType: string
+  count: number
+}
+
+export async function getTopActions(
+  limit: number = 10,
+  days: number | null = 30,
+): Promise<TopAction[]> {
+  try {
+    let query = `
+      SELECT 
+        action_type as "actionType",
+        COUNT(*) as count
+      FROM isp_support.actions
+      WHERE action_type LIKE 'execute_%'
+    `
+
+    const params: any[] = []
+    if (days !== null) {
+      query += ` AND created_at >= NOW() - INTERVAL '${days} days'`
+    }
+
+    query += `
+      GROUP BY action_type
+      ORDER BY count DESC
+      LIMIT $1
+    `
+    params.push(limit)
+
+    const result = await pool.query(query, params)
+    return result.rows.map((row) => ({
+      actionType: row.actionType.replace('execute_', ''),
+      count: parseInt(row.count, 10),
+    }))
+  } catch (error) {
+    console.error('Error fetching top actions:', error)
+    throw error
+  }
+}
+
 export async function closePool(): Promise<void> {
   await pool.end()
 }

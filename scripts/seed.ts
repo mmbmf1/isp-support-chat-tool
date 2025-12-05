@@ -33,6 +33,21 @@ const scenarios = [
       'User reports complete loss of internet connectivity. All devices are unable to access the internet. Check router status lights, verify cable connections, restart the router, and check for any service outages in the area. May require ISP authentication reset.',
   },
   {
+    title: 'Remote Router Reset Needed',
+    description:
+      'Router is unresponsive or needs to be reset remotely. Customer cannot access router or perform local reset. Router may be stuck in a bad state and requires remote reset to restore connectivity.',
+  },
+  {
+    title: 'Speed Test Required',
+    description:
+      'Customer reports slow speeds or wants to verify connection performance. Need to run a remote speed test to check actual download/upload speeds and latency to diagnose connection issues.',
+  },
+  {
+    title: 'ONT Equipment Restart',
+    description:
+      'Optical Network Terminal (ONT) needs to be restarted remotely. ONT may be unresponsive or experiencing connectivity issues that require a remote restart to resolve.',
+  },
+  {
     title: 'Slow Internet Speeds',
     description:
       'Internet connection is working but speeds are significantly slower than expected. Users experiencing slow download/upload speeds, buffering, or high latency. Check for bandwidth congestion, verify service plan limits, test with wired connection, and check for background processes consuming bandwidth.',
@@ -386,7 +401,7 @@ const resolutions = [
     steps: [
       'Check all router status lights - refer to ONT Light Status Guide for light meanings',
       'Verify all cable connections are secure (power, Ethernet, fiber)',
-      'Power cycle the router: unplug for 30 seconds, then plug back in',
+      'Reset router remotely using the action button below',
       'Wait 2-3 minutes for router to fully restart',
       'Check for service outages in your area - view outage map if available',
       'Try connecting a device directly to the router via Ethernet cable',
@@ -396,7 +411,39 @@ const resolutions = [
   },
   {
     steps: [
+      'Verify customer account and router information',
+      'Reset router remotely using the action button below',
+      'Wait 2-3 minutes for router to complete restart cycle',
+      'Verify router comes back online and establishes connection',
+      'Confirm with customer that connectivity is restored',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer account and service information',
+      'Run speed test remotely using the action button below',
+      'Review speed test results (download, upload, latency)',
+      'Compare results to customer service plan speeds',
+      'If speeds are below expected, restart equipment and test again',
+      'Document results for troubleshooting if issues persist',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
+      'Verify customer account and ONT information',
+      'Restart equipment remotely using the action button below',
+      'Wait 3-5 minutes for ONT to fully restart and re-establish connection',
+      'Verify ONT status lights return to normal',
+      'Confirm with customer that service is restored',
+    ],
+    stepType: 'numbered' as const,
+  },
+  {
+    steps: [
       'Test internet speed using a wired connection (eliminates WiFi issues)',
+      'Run speed test remotely using the action button below',
       'Refer to Speed Test Reference for interpreting speed test results',
       'Check for bandwidth-heavy applications running in background',
       'Verify your service plan limits match expected speeds',

@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  XMarkIcon,
   MapIcon,
   DocumentTextIcon,
   CalendarIcon,
@@ -506,32 +505,40 @@ export default function KnowledgeBaseItemDisplay({
   }
 
   return (
-    <div className={`mt-6 p-4 border rounded-lg ${getTypeColor()}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      {item.description && (
+        <p className="text-base text-slate-700 leading-relaxed">
+          {item.description}
+        </p>
+      )}
+      <div className={`p-4 border rounded-lg ${getTypeColor()}`}>
+        <div className="flex items-center gap-2 mb-3">
           {item.type === 'reference' && (
             <DocumentTextIcon className="w-5 h-5 text-yellow-700" />
           )}
           {item.type === 'outage' && (
             <MapIcon className="w-5 h-5 text-red-700" />
           )}
-          <h4 className="font-semibold text-slate-900">{item.title}</h4>
+          <h4 className="font-semibold text-slate-900 text-lg">
+            {item.type === 'reference'
+              ? 'Reference Details'
+              : item.type === 'outage'
+                ? 'Outage Information'
+                : item.type === 'equipment'
+                  ? 'Equipment Details'
+                  : item.type === 'policy'
+                    ? 'Policy Information'
+                    : item.type === 'subscriber'
+                      ? 'Subscriber Information'
+                      : 'Details'}
+          </h4>
         </div>
-        <button
-          onClick={onClose}
-          className="text-slate-600 hover:text-slate-800"
-        >
-          <XMarkIcon className="w-5 h-5" />
-        </button>
+        {renderMetadata()}
       </div>
-      {item.description && (
-        <p className="text-sm text-slate-700 mb-3">{item.description}</p>
-      )}
-      {renderMetadata()}
       {item.type === 'work_order' && onScheduleWorkOrder && (
         <button
           onClick={onScheduleWorkOrder}
-          className="w-full mt-3 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md"
         >
           <CalendarIcon className="w-5 h-5" />
           Schedule Work Order
@@ -540,7 +547,7 @@ export default function KnowledgeBaseItemDisplay({
       {item.type === 'subscriber' && onUpdateSubscriber && (
         <button
           onClick={onUpdateSubscriber}
-          className="w-full mt-3 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md"
         >
           <UserIcon className="w-5 h-5" />
           Update Subscriber Data

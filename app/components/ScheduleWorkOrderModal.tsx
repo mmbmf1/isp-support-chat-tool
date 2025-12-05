@@ -133,6 +133,19 @@ export default function ScheduleWorkOrderModal({
 
       const data = await response.json()
       setScheduledWorkOrder(data)
+
+      // Log the action (non-blocking)
+      fetch('/api/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'schedule_work_order',
+          itemName: workOrder.title,
+          itemType: 'work_order',
+        }),
+      }).catch(() => {
+        // Silently handle errors
+      })
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to schedule work order',

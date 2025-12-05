@@ -8,8 +8,14 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 async function runMigration() {
-  // Get migration file from command line argument or use default
-  let migrationFile = process.argv[2] || 'migrate-work-orders.sql'
+  // Get migration file from command line argument
+  let migrationFile = process.argv[2]
+  
+  if (!migrationFile) {
+    console.error('Error: Migration file is required')
+    console.error('Usage: tsx scripts/run-migration.ts <migration-file.sql>')
+    process.exit(1)
+  }
   
   // Remove 'scripts/' prefix if present
   if (migrationFile.startsWith('scripts/')) {

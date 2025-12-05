@@ -1,39 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateEmbedding } from '@/lib/embeddings'
-import { searchSimilarScenarios } from '@/lib/db'
+import { searchSimilarScenarios, logSearch } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { query, type } = body
+    const { query, type } = await request.json()
 
-    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+    if (!query?.trim()) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
-    // Validate type if provided
-    if (type && type !== 'scenario' && type !== 'work_order') {
-      return NextResponse.json(
-        { error: 'Invalid type. Must be "scenario" or "work_order"' },
-        { status: 400 },
-      )
-    }
+    const trimmedQuery = query.trim()
+    logSearch(trimmedQuery).catch(() => {})
 
-    const queryEmbedding = await generateEmbedding(query.trim())
-    // Default to scenarios only unless explicitly searching for work orders
-    const searchType = type || 'scenario'
+    const queryEmbedding = await generateEmbedding(trimmedQuery)
     const results = await searchSimilarScenarios(
       queryEmbedding,
       5,
-      searchType as 'scenario' | 'work_order',
+      (type || 'scenario') as 'scenario' | 'work_order',
     )
 
     return NextResponse.json({ results })
   } catch (error) {
-    console.error('Error in search API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
