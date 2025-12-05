@@ -228,6 +228,11 @@ const scenarios = [
       'Customer wants to compare different service plans or understand plan differences. Customer is shopping for best plan, wants to understand speed differences, or comparing pricing options. Review available plans, explain speed and feature differences, compare pricing and contract terms, discuss which plan fits their usage, and answer questions about plan features.',
   },
   {
+    title: 'Government Funding Eligibility Inquiry',
+    description:
+      'Customer is asking about government funding programs like BEAD or RDOF for their location. Customer wants to know if they qualify for subsidized service, asking about program eligibility, or checking if their area is covered by funding programs. Check location eligibility, verify program requirements, explain funding availability, and determine if customer qualifies for government-subsidized service.',
+  },
+  {
     title: 'Early Termination Fee Question',
     description:
       'Customer is asking about early termination fees or wants to cancel service before contract ends. Customer wants to cancel service, is moving, or asking about contract cancellation costs. Review contract terms and end date, explain early termination fees if applicable, discuss options to avoid fees, check for contract buyout programs, and process cancellation if requested.',
@@ -367,7 +372,7 @@ const resolutions = [
   },
   {
     steps: [
-      'Check for any service outages in your area - view Area Outage - Downtown map if applicable',
+      'Check for any service outages in your area - view Area Outage map if applicable',
       'Verify your account is active and in good standing',
       'Check Router Model X-2000 specifications for default settings',
       'Ensure all Ethernet cables are securely connected to the router',
@@ -890,7 +895,7 @@ const resolutions = [
     steps: [
       'Check outage reporting system for customer area',
       'Check for Planned Maintenance Outage or Network Node Failure in affected areas',
-      'View Area Outage - Downtown map if downtown area is affected',
+      'View Area Outage map if area is affected',
       'Verify if there are any known outages or maintenance',
       'Check customer account status for service issues',
       'Review any scheduled maintenance in area',
@@ -914,6 +919,19 @@ const resolutions = [
       'Offer to help switch plans if customer decides',
     ],
     stepType: 'bullets' as const,
+  },
+  {
+    steps: [
+      'Verify customer service address and location',
+      'Refer to Government Funding Policy - BEAD/RDOF for eligibility criteria',
+      'Check if location is in designated underserved/unserved area',
+      'Verify program requirements (BEAD or RDOF)',
+      'Check if location meets minimum speed requirements',
+      'Explain funding eligibility status to customer',
+      'If eligible, provide information on subsidized service options',
+      'Document eligibility determination for records',
+    ],
+    stepType: 'numbered' as const,
   },
   {
     steps: [

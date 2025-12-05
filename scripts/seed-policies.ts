@@ -74,6 +74,24 @@ const policies = [
       processingTime: '1-2 billing cycles',
     },
   },
+  {
+    name: 'Government Funding Policy - BEAD/RDOF',
+    description: 'Policy for government funding eligibility through BEAD and RDOF programs. Determines if locations or customers are eligible for government-subsidized service.',
+    metadata: {
+      category: 'funding',
+      appliesTo: ['eligible_locations', 'eligible_customers'],
+      programs: ['BEAD', 'RDOF'],
+      eligibilityCriteria: [
+        'Location must be in designated underserved/unserved area',
+        'Must meet program-specific requirements',
+        'Service must meet minimum speed requirements',
+      ],
+      verificationRequired: true,
+      approvalLevel: 'manager',
+      documentationRequired: ['location_verification', 'program_eligibility'],
+      notes: 'High-level policy for determining funding eligibility. Detailed program requirements available in program documentation.',
+    },
+  },
 ]
 
 async function seedPolicies() {

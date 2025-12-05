@@ -12,7 +12,13 @@ interface KnowledgeBaseItem {
   id: number
   title: string
   description: string
-  type: 'equipment' | 'outage' | 'policy' | 'reference' | 'work_order' | 'subscriber'
+  type:
+    | 'equipment'
+    | 'outage'
+    | 'policy'
+    | 'reference'
+    | 'work_order'
+    | 'subscriber'
   metadata?: Record<string, any>
 }
 
@@ -47,9 +53,7 @@ export default function KnowledgeBaseItemDisplay({
                       <span className="text-blue-600 font-medium capitalize">
                         {key.replace(/([A-Z])/g, ' $1').trim()}:{' '}
                       </span>
-                      <span className="text-blue-800">
-                        {String(value)}
-                      </span>
+                      <span className="text-blue-800">{String(value)}</span>
                     </div>
                   ))}
                 </div>
@@ -150,14 +154,13 @@ export default function KnowledgeBaseItemDisplay({
                 </button>
               </div>
             )}
-            {item.metadata.requiresWorkOrder &&
-              item.metadata.workOrderType && (
-                <div>
-                  <span className="text-blue-600 font-medium">
-                    Work Order: {item.metadata.workOrderType}
-                  </span>
-                </div>
-              )}
+            {item.metadata.requiresWorkOrder && item.metadata.workOrderType && (
+              <div>
+                <span className="text-blue-600 font-medium">
+                  Work Order: {item.metadata.workOrderType}
+                </span>
+              </div>
+            )}
           </div>
         )
 
@@ -208,6 +211,39 @@ export default function KnowledgeBaseItemDisplay({
                 </ul>
               </div>
             )}
+            {item.metadata.programs &&
+              Array.isArray(item.metadata.programs) && (
+                <div>
+                  <h5 className="text-sm font-semibold text-blue-900 mb-1">
+                    Programs
+                  </h5>
+                  <div className="text-sm text-blue-800">
+                    {item.metadata.programs.join(', ')}
+                  </div>
+                </div>
+              )}
+            {item.metadata.eligibilityCriteria && (
+              <div>
+                <h5 className="text-sm font-semibold text-blue-900 mb-1">
+                  Eligibility Criteria
+                </h5>
+                <ul className="list-disc list-inside text-sm text-blue-800">
+                  {item.metadata.eligibilityCriteria.map(
+                    (criteria: string, idx: number) => (
+                      <li key={idx}>{criteria}</li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
+            {item.metadata.notes && (
+              <div>
+                <h5 className="text-sm font-semibold text-blue-900 mb-1">
+                  Notes
+                </h5>
+                <p className="text-sm text-blue-800">{item.metadata.notes}</p>
+              </div>
+            )}
           </div>
         )
 
@@ -226,7 +262,9 @@ export default function KnowledgeBaseItemDisplay({
                         <span className="text-blue-600 font-medium">
                           {range}:{' '}
                         </span>
-                        <span className="text-blue-800">{String(description)}</span>
+                        <span className="text-blue-800">
+                          {String(description)}
+                        </span>
                       </div>
                     ),
                   )}

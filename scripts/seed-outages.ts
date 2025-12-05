@@ -7,17 +7,17 @@ import { insertScenario, closePool, pool } from '../lib/db'
 
 const outages = [
   {
-    name: 'Area Outage - Downtown',
-    description: 'Multiple customers reporting service outage in downtown area. Check outage map for affected zones and dispatch technicians as needed.',
+    name: 'Area Outage',
+    description: 'Multiple customers reporting service outage in affected area. Check outage map for affected zones and dispatch technicians as needed.',
     metadata: {
       affectedAreas: [
         {
-          name: 'Downtown Core',
+          name: 'Core Service Area',
           center: [40.7580, -73.9855],
           radius: 2.0, // miles
         },
         {
-          name: 'Financial District',
+          name: 'Secondary Service Area',
           center: [40.7074, -74.0113],
           radius: 1.5,
         },
