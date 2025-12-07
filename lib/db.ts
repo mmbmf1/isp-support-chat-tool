@@ -9,8 +9,7 @@ dotenv.config({ path: envPath })
 
 // Validate DATABASE_URL is set
 if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is not set. Please check your .env.local file.')
-  process.exit(1)
+  throw new Error('DATABASE_URL is not set. Please check your .env.local file.')
 }
 
 // Get database schema name from environment variable (default: isp_support)
@@ -34,7 +33,7 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err)
-  process.exit(-1)
+  // Don't exit - let Next.js handle the error gracefully
 })
 
 export interface Scenario {
@@ -291,17 +290,12 @@ export async function getResolution(
     }
 
     const row = result.rows[0]
-    // Parse steps from JSON string or array
+    // Parse steps from JSONB (assumes we control the data format)
     let steps: string[]
-    if (typeof row.steps === 'string') {
-      try {
-        steps = JSON.parse(row.steps)
-      } catch {
-        // If not JSON, treat as newline-separated
-        steps = row.steps.split('\n').filter((s: string) => s.trim())
-      }
-    } else if (Array.isArray(row.steps)) {
+    if (Array.isArray(row.steps)) {
       steps = row.steps
+    } else if (typeof row.steps === 'string') {
+      steps = JSON.parse(row.steps)
     } else {
       steps = []
     }

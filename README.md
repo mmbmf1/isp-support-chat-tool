@@ -1,148 +1,102 @@
 # Knowledge Base Search
 
-A semantic search application for knowledge bases with vector embeddings, feedback tracking, and analytics.
+A semantic search application that enables intelligent content discovery using vector embeddings. Built to be adaptable across industries and domains.
+
+## Overview
+
+This application provides semantic search capabilities for knowledge bases, allowing users to find relevant content through natural language queries. The system uses vector embeddings to understand query intent and match it with similar content, regardless of exact keyword matches.
 
 ## Features
 
-- **Semantic Search**: Vector-based similarity search using embeddings
-- **Knowledge Base**: Support for multiple content types (scenarios, work orders, equipment, outages, policies, references, subscribers)
-- **Feedback System**: Track helpful/not helpful ratings with analytics
-- **Top Searches**: Display most popular and helpful searches
-- **Interactive Modals**: View detailed resolutions and knowledge base items
+- **Semantic Search** - Vector-based similarity search using embeddings
+- **Multi-Content Types** - Support for various content types (scenarios, work orders, equipment, policies, references, etc.)
+- **Feedback System** - Track helpfulness ratings to improve search quality
+- **Analytics** - Search insights and usage tracking
+- **Responsive Design** - Mobile-friendly interface
 
 ## Tech Stack
 
-- **Next.js 16** - React framework
-- **PostgreSQL** - Database with pgvector extension
-- **Hugging Face Transformers** - Embedding generation
-- **Tailwind CSS** - Styling
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
+- **PostgreSQL** - Database with pgvector extension for vector similarity search
+- **Hugging Face Transformers** - Local embedding generation (Xenova/all-MiniLM-L6-v2)
 - **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Docker** - Containerized PostgreSQL setup
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 18 or higher
 - Docker and Docker Compose
+- npm or yarn
 
 ## Quick Start
 
 1. **Install dependencies**
-
    ```bash
    npm install
    ```
 
 2. **Configure environment**
-
-   Create `.env.local` file:
-
+   
+   Create a `.env.local` file in the root directory:
    ```bash
    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/isp_support
-   DB_SCHEMA=isp_support           # Optional: Database schema name (default: isp_support)
-   DB_NAME=isp_support             # Optional: Database name for Docker (default: isp_support)
-   DB_CONTAINER_NAME=isp-support-db # Optional: Docker container name (default: isp-support-db)
-   DEFAULT_INDUSTRY=isp            # Optional: Default industry for scenarios (default: isp)
-   INDUSTRY=isp                    # Optional: Industry config to use (default: isp)
    ```
 
-3. **Start database with Docker**
-
+3. **Start the database**
    ```bash
    npm run docker:up
    ```
+   This starts PostgreSQL with pgvector extension in a Docker container.
 
-   This starts PostgreSQL with pgvector extension in a container. The database persists in a Docker volume, so your data survives container restarts.
-
-4. **Setup database** (migration + seeding)
-
+4. **Setup the database**
    ```bash
    npm run setup
    ```
+   This runs migrations and seeds initial data.
 
-5. **Start development server**
+5. **Start the development server**
    ```bash
    npm run dev
    ```
 
-Open [http://localhost:3000](http://localhost:3000)
-
-## Docker Setup
-
-This project uses Docker Compose to run PostgreSQL with the pgvector extension, which is required for semantic search.
-
-**Why Docker?**
-
-- **pgvector Extension**: Pre-configured PostgreSQL image with vector similarity search
-- **Zero Configuration**: No need to install PostgreSQL or extensions manually
-- **Data Persistence**: Database data persists in Docker volumes
-- **Easy Reset**: Stop/start containers without losing data
-- **Consistent Environment**: Same database setup across all machines
-
-**Docker Commands:**
-
-- `npm run docker:up` - Start PostgreSQL container
-- `npm run docker:down` - Stop and remove container (data persists in volume)
-- `docker-compose ps` - Check container status
-- `docker-compose logs postgres` - View database logs
-
-**Database Details:**
-
-- **Image**: `pgvector/pgvector:pg16` (PostgreSQL 16 with pgvector)
-- **Port**: `5432` (mapped to host)
-- **Credentials**: `postgres/postgres`
-- **Database**: `isp_support` (configurable via `DB_NAME` env var)
-- **Schema**: `isp_support` (configurable via `DB_SCHEMA` env var)
-- **Volume**: `postgres_data` (persists data between restarts)
+6. **Open your browser**
+   
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## Available Scripts
-
-**Database:**
-
-- `npm run setup` - Complete database setup (migration + all seeding)
-- `npm run migrate` - Run database migrations only
-- `npm run seed` - Seed all data (requires schema to exist)
-
-**Docker:**
-
-- `npm run docker:up` - Start PostgreSQL container
-- `npm run docker:down` - Stop PostgreSQL container
-
-**Development:**
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
+- `npm run docker:up` - Start PostgreSQL container
+- `npm run docker:down` - Stop PostgreSQL container
+- `npm run setup` - Setup database (migrations + seeding)
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
 
-## Project Structure
+## How It Works
 
-```
-app/
-  api/              # API routes
-  components/       # React components
-  page.tsx         # Main search page
-lib/
-  db.ts            # Database functions
-  embeddings.ts    # Embedding generation
-scripts/
-  setup-db.ts      # Complete database setup
-  migrate-all.ts   # Migration runner
-  seed-all.ts      # Seed data runner
-  seed-*.ts        # Individual seed scripts
-```
+1. **Query Processing** - User enters a natural language search query
+2. **Embedding Generation** - Query is converted to a 384-dimensional vector embedding
+3. **Similarity Search** - PostgreSQL pgvector performs cosine similarity search
+4. **Ranking** - Results are ranked by similarity score and user feedback
+5. **Feedback Loop** - User feedback improves future search results
 
-## Database Schema
+## Architecture
 
-- `scenarios` - Main content items with vector embeddings
-- `resolutions` - Step-by-step resolution instructions
-- `feedback` - User ratings (helpful/not helpful)
-- `actions` - User interaction logs
+The application uses a semantic search approach where:
 
-## Development
+- Content is stored in PostgreSQL with pre-computed vector embeddings
+- Search queries are converted to embeddings in real-time
+- Cosine similarity is used to find the most relevant matches
+- User feedback is incorporated into the ranking algorithm
 
-The app uses semantic search with vector embeddings. When a user searches:
+## Database
 
-1. Query is converted to a 384-dimensional embedding
-2. Cosine similarity search finds matching scenarios
-3. Results are ranked by similarity and feedback scores
-4. User can provide feedback to improve future results
+PostgreSQL runs in a Docker container with the pgvector extension enabled. The database persists data in a Docker volume, so your data survives container restarts.
+
+## License
+
+Private project.

@@ -1,35 +1,32 @@
-import { pipeline } from '@huggingface/transformers'
+import { pipeline, Pipeline } from '@huggingface/transformers'
 
-// Use the Singleton pattern to enable lazy construction of the pipeline.
-// Wrap the class in a function to prevent code duplication
-const P = () =>
-  class PipelineSingleton {
-    static task = 'feature-extraction'
-    static model = 'Xenova/all-MiniLM-L6-v2'
-    static instance: any = null
+// Singleton pattern for lazy loading the embedding pipeline
+class PipelineSingleton {
+  private static instance: Promise<Pipeline> | null = null
+  private static readonly task = 'feature-extraction'
+  private static readonly model = 'Xenova/all-MiniLM-L6-v2'
 
-    static async getInstance() {
-      if (this.instance === null) {
-        this.instance = pipeline(this.task as any, this.model)
-      }
-      return this.instance
+  static async getInstance(): Promise<Pipeline> {
+    if (!this.instance) {
+      this.instance = pipeline(this.task, this.model)
     }
+    return this.instance
   }
-
-// Preserve pipeline instance in development to survive hot reloads
-let PipelineSingleton: ReturnType<typeof P>
-if (process.env.NODE_ENV !== 'production') {
-  if (!global.PipelineSingleton) {
-    global.PipelineSingleton = P()
-  }
-  PipelineSingleton = global.PipelineSingleton
-} else {
-  PipelineSingleton = P()
 }
 
-// Extend global type for TypeScript
+// Preserve instance in development to survive hot reloads
+const getPipelineSingleton = (): typeof PipelineSingleton => {
+  if (process.env.NODE_ENV !== 'production') {
+    if (!global.PipelineSingleton) {
+      global.PipelineSingleton = PipelineSingleton
+    }
+    return global.PipelineSingleton
+  }
+  return PipelineSingleton
+}
+
 declare global {
-  var PipelineSingleton: ReturnType<typeof P>
+  var PipelineSingleton: typeof PipelineSingleton
 }
 
 /**
@@ -38,11 +35,12 @@ declare global {
  * @returns Promise resolving to 384-dimensional vector array
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const extractor = await PipelineSingleton.getInstance()
+  const Pipeline = getPipelineSingleton()
+  const extractor = await Pipeline.getInstance()
   const output = await extractor(text, { pooling: 'mean', normalize: true })
 
-  // Simplified extraction - assumes output.data is the tensor data
-  const tensorData = (output as any).data
+  // Extract tensor data and convert to array
+  const tensorData = (output as { data: Float32Array | number[] }).data
   const embedding = Array.from(tensorData)
 
   // Validate and convert to numbers

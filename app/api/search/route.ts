@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateEmbedding } from '@/lib/embeddings'
 import { searchSimilarScenarios } from '@/lib/db'
 import { getIndustryConfig } from '@/lib/industry-config'
+import { validateString } from '@/lib/api-validation'
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, type } = await request.json()
+    const body = await request.json()
+    const { query, type } = body
 
-    if (!query?.trim()) {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 })
+    const queryError = validateString(query, 'Query')
+    if (queryError) {
+      return NextResponse.json({ error: queryError }, { status: 400 })
     }
 
     const trimmedQuery = query.trim()
